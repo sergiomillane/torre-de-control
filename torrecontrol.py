@@ -1,171 +1,186 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+import datetime
+import os
 
-# Configuración de la aplicación
-st.set_page_config(
-    page_title="Torre de Control - Empresa",
-    layout="wide",
-)
+# Archivos para persistencia
+USUARIOS_FILE = "usuarios.csv"
+COMENTARIOS_FILE = "comentarios.csv"
 
-# Título principal
-st.title("Torre de Control Empresarial")
-st.markdown("Bienvenido a la torre de control. Aquí puedes monitorear los principales KPIs de cada departamento de tu empresa.")
+# Master Key para registro
+MASTER_KEY = "soygay1"
 
-# Barra lateral para navegación
-departamento = st.sidebar.radio(
-    "Selecciona un departamento:",
-    [
-        "Resumen General",
-        "Originación de Crédito",
-        "Cobranza Virtual",
-        "Cobranza Campo",
-        "Venta en Tienda",
-        "Sistemas",
-        "Desarrollo",
-        "Riesgos",
-        "Recursos Humanos",
-    ],
-)
+# Departamentos disponibles
+DEPARTAMENTOS = ["Dirección", "Originación de crédito", "Cobranza virtual",
+                 "Cobranza campo", "Venta en tienda", "Sistemas",
+                 "Desarrollo", "Riesgos", "Recursos humanos"]
 
-# Función para gráficos de ejemplo
-def generar_grafico_ejemplo(titulo, x, y):
-    fig, ax = plt.subplots()
-    ax.bar(x, y, alpha=0.7, color="skyblue")
-    ax.set_title(titulo)
-    ax.set_ylabel("Valor")
-    ax.set_xlabel("Categoría")
-    st.pyplot(fig)
+# Cargar usuarios
+def cargar_usuarios():
+    if os.path.exists(USUARIOS_FILE):
+        return pd.read_csv(USUARIOS_FILE)
+    else:
+        return pd.DataFrame(columns=["Usuario", "Contraseña", "Departamento"])
 
-# Función para tablas de ejemplo
-def mostrar_tabla_ejemplo(titulo, datos):
-    st.subheader(titulo)
-    st.dataframe(datos)
+# Guardar usuarios
+def guardar_usuarios(usuarios):
+    usuarios.to_csv(USUARIOS_FILE, index=False)
 
-# Resumen General
-if departamento == "Resumen General":
-    st.subheader("Resumen General de la Empresa")
-    st.markdown("Este panel muestra un resumen consolidado de los indicadores clave de cada departamento.")
-    
-    # Indicadores de ejemplo
-    kpis = {
-        "Originación de Crédito": np.random.randint(50, 100),
-        "Cobranza Virtual": np.random.randint(70, 100),
-        "Cobranza Campo": np.random.randint(60, 90),
-        "Venta en Tienda": np.random.randint(80, 120),
-        "Sistemas": np.random.randint(20, 50),
-        "Desarrollo": np.random.randint(10, 40),
-        "Riesgos": np.random.randint(5, 15),
-        "Recursos Humanos": np.random.randint(40, 80),
-    }
+# Cargar comentarios
+def cargar_comentarios():
+    if os.path.exists(COMENTARIOS_FILE):
+        return pd.read_csv(COMENTARIOS_FILE)
+    else:
+        return pd.DataFrame(columns=["Usuario", "Departamento", "Comentario", "FechaHora"])
 
-    # KPIs como tarjetas
-    cols = st.columns(len(kpis))
-    for idx, (key, value) in enumerate(kpis.items()):
-        with cols[idx]:
-            st.metric(label=key, value=f"{value}%")
-    
-    # Gráfico consolidado
-    generar_grafico_ejemplo(
-        "Consolidado de Desempeño",
-        list(kpis.keys()),
-        list(kpis.values()),
-    )
+# Guardar comentarios
+def guardar_comentarios(comentarios):
+    comentarios.to_csv(COMENTARIOS_FILE, index=False)
 
-# Originación de Crédito
-elif departamento == "Originación de Crédito":
-    st.subheader("Originación de Crédito")
-    st.markdown("Monitoreo de solicitudes y tiempos de aprobación.")
+# Pantalla de inicio
+def pantalla_inicio():
+    st.title("Torre de Control - Inicio de Sesión")
+    usuarios = cargar_usuarios()
 
-    # Tabla de ejemplo
-    datos_credito = pd.DataFrame({
-        "Fecha": pd.date_range(start="2023-11-01", periods=10),
-        "Solicitudes Recibidas": np.random.randint(100, 200, size=10),
-        "Aprobaciones": np.random.randint(50, 150, size=10),
-        "Tasa de Aprobación (%)": np.random.randint(40, 80, size=10),
-    })
-    mostrar_tabla_ejemplo("Resumen de Solicitudes", datos_credito)
+    # Seleccionar entre iniciar sesión o registrarse
+    opcion = st.radio("Selecciona una opción:", ["Iniciar sesión", "Registrarse"])
 
-    # Gráfico
-    generar_grafico_ejemplo(
-        "Solicitudes y Aprobaciones",
-        datos_credito["Fecha"].dt.strftime("%d-%b"),
-        datos_credito["Solicitudes Recibidas"],
-    )
+    if opcion == "Iniciar sesión":
+        usuario = st.text_input("Usuario")
+        contraseña = st.text_input("Contraseña", type="password")
 
-# Cobranza Virtual
-elif departamento == "Cobranza Virtual":
-    st.subheader("Cobranza Virtual")
-    st.markdown("Seguimiento a la recuperación virtual de pagos.")
+        if st.button("Iniciar sesión"):
+            if usuario in usuarios["Usuario"].values:
+                datos_usuario = usuarios[usuarios["Usuario"] == usuario].iloc[0]
+                if datos_usuario["Contraseña"] == contraseña:
+                    st.session_state["usuario"] = usuario
+                    st.session_state["departamento"] = datos_usuario["Departamento"]
+                    st.session_state["autenticado"] = True
+                else:
+                    st.error("Contraseña incorrecta.")
+            else:
+                st.error("Usuario no encontrado.")
+    elif opcion == "Registrarse":
+        pantalla_registro()
 
-    # Indicadores y gráfico de ejemplo
-    datos_cobranza = pd.DataFrame({
-        "Mes": ["Enero", "Febrero", "Marzo", "Abril"],
-        "Cuentas Gestionadas": np.random.randint(1000, 2000, size=4),
-        "Pagos Realizados": np.random.randint(500, 1500, size=4),
-    })
-    mostrar_tabla_ejemplo("Gestión de Cuentas", datos_cobranza)
+# Pantalla de registro
+def pantalla_registro():
+    st.title("Registrar nueva cuenta")
+    usuarios = cargar_usuarios()
 
-    generar_grafico_ejemplo(
-        "Pagos Realizados por Mes",
-        datos_cobranza["Mes"],
-        datos_cobranza["Pagos Realizados"],
-    )
+    master_key_input = st.text_input("Ingresa la Master Key", type="password")
+    if master_key_input != MASTER_KEY:
+        st.error("Debes ingresar la Master Key correcta para registrarte.")
+        return
 
-# Cobranza Campo
-elif departamento == "Cobranza Campo":
-    st.subheader("Cobranza en Campo")
-    st.markdown("Rutas y visitas realizadas para cobranza.")
+    nuevo_usuario = st.text_input("Nombre de usuario")
+    nueva_contraseña = st.text_input("Contraseña", type="password")
+    departamento = st.selectbox("Selecciona tu departamento", DEPARTAMENTOS)
 
-    # Tabla de rutas y KPI de éxito
-    datos_rutas = pd.DataFrame({
-        "Ruta": [f"Ruta {i}" for i in range(1, 6)],
-        "Visitas Programadas": np.random.randint(50, 100, size=5),
-        "Visitas Completadas": np.random.randint(40, 90, size=5),
-        "Efectividad (%)": np.random.randint(60, 90, size=5),
-    })
-    mostrar_tabla_ejemplo("Estatus de Rutas", datos_rutas)
+    if st.button("Registrar"):
+        if nuevo_usuario in usuarios["Usuario"].values:
+            st.error("El usuario ya existe. Intenta con otro nombre.")
+        else:
+            nuevo_usuario_data = pd.DataFrame(
+                [{"Usuario": nuevo_usuario, "Contraseña": nueva_contraseña, "Departamento": departamento}]
+            )
+            usuarios = pd.concat([usuarios, nuevo_usuario_data], ignore_index=True)
+            guardar_usuarios(usuarios)
+            st.success("¡Usuario registrado con éxito! Ahora puedes iniciar sesión.")
 
-    generar_grafico_ejemplo(
-        "Efectividad por Ruta",
-        datos_rutas["Ruta"],
-        datos_rutas["Efectividad (%)"],
-    )
+# Mostrar la pantalla principal
+def pantalla_principal():
+    st.sidebar.title("TORRE DE CONTROL VB")
+    st.sidebar.markdown(f"#### Bienvenido, {st.session_state['usuario']}!")
 
-# Venta en Tienda
-elif departamento == "Venta en Tienda":
-    st.subheader("Venta en Tienda")
-    st.markdown("Métricas de ventas e inventarios.")
+    pagina = st.sidebar.radio("Selecciona un departamento", DEPARTAMENTOS)
 
-    # Tabla de ventas por tienda
-    datos_ventas = pd.DataFrame({
-        "Tienda": [f"Tienda {i}" for i in range(1, 6)],
-        "Ventas (USD)": np.random.randint(5000, 20000, size=5),
-        "Inventario Restante": np.random.randint(200, 1000, size=5),
-    })
-    mostrar_tabla_ejemplo("Desempeño por Tienda", datos_ventas)
+    if pagina == "Dirección":
+        st.title("Resumen General - Dirección")
+        st.metric("Indicador Global", "85%", "5%")
+        st.metric("KPI Clave", "10,000 USD", "-500 USD")
+    elif pagina == "Originación de crédito":
+        st.title("KPIs - Originación de Crédito")
+        st.metric("Créditos aprobados", "120", "+15")
+        st.metric("Monto originado", "2,000,000 USD", "+200,000 USD")
+    elif pagina == "Cobranza virtual":
+        st.title("KPIs - Cobranza Virtual")
+        st.metric("Cobros efectivos", "75%", "+5%")
+        st.metric("Tiempo promedio de contacto", "1 min", "-10 sec")
+    elif pagina == "Cobranza campo":
+        st.title("KPIs - Cobranza Campo")
+        st.metric("Recuperación", "90%", "+10%")
+        st.metric("Visitas realizadas", "300", "+50")
+        st.components.v1.iframe("https://lookerstudio.google.com/reporting/5d9046c5-a483-4e9e-8dce-0200342da70d", height=600)
+    elif pagina == "Venta en tienda":
+        st.title("KPIs - Venta en Tienda")
+        st.metric("Ventas totales", "500,000 USD", "+50,000 USD")
+        st.metric("Clientes atendidos", "5,000", "+500")
+    elif pagina == "Sistemas":
+        st.title("KPIs - Sistemas")
+        st.metric("Tiempo de respuesta", "2 horas", "-30 min")
+        st.metric("Tickets resueltos", "95%", "+5%")
+    elif pagina == "Desarrollo":
+        st.title("KPIs - Desarrollo")
+        st.metric("Proyectos completados", "8", "+2")
+        st.metric("Horas invertidas", "200 horas", "+20 horas")
+    elif pagina == "Riesgos":
+        st.title("KPIs - Riesgos")
+        st.metric("Riesgos mitigados", "95%", "+10%")
+        st.metric("Alertas activadas", "10", "-2")
+    elif pagina == "Recursos humanos":
+        st.title("KPIs - Recursos Humanos")
+        st.metric("Contrataciones", "15", "+5")
+        st.metric("Capacitaciones", "8", "+2")
 
-    generar_grafico_ejemplo(
-        "Ventas por Tienda",
-        datos_ventas["Tienda"],
-        datos_ventas["Ventas (USD)"],
-    )
+    # Mostrar botón para el foro
+    mostrar_foro(pagina)
 
-# Sistemas
-elif departamento == "Sistemas":
-    st.subheader("Sistemas")
-    st.markdown("Seguimiento de tickets y proyectos de tecnología.")
+    # Botón de cerrar sesión
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Cerrar sesión", key="cerrar_sesion"):
+        st.session_state["autenticado"] = False
+        st.experimental_rerun()
 
-    # Tabla de tickets
-    datos_tickets = pd.DataFrame({
-        "Prioridad": ["Alta", "Media", "Baja", "Alta", "Media"],
-        "Tickets Abiertos": np.random.randint(10, 50, size=5),
-        "Tickets Resueltos": np.random.randint(5, 30, size=5),
-    })
-    mostrar_tabla_ejemplo("Estatus de Tickets", datos_tickets)
+# Función para mostrar el foro
+def mostrar_foro(departamento):
+    comentarios = cargar_comentarios()
+    comentarios_departamento = comentarios[comentarios["Departamento"] == departamento]
 
-# Desarrollo, Riesgos y Recursos Humanos
-elif departamento in ["Desarrollo", "Riesgos", "Recursos Humanos"]:
-    st.subheader(f"{departamento}")
-    st.markdown(f"Próximamente se implementarán métricas específicas para el departamento de {departamento}.")
+    if f"mostrar_foro_{departamento}" not in st.session_state:
+        st.session_state[f"mostrar_foro_{departamento}"] = False
+
+    # Botón para desplegar/replegar el foro
+    if st.sidebar.button(f"Mostrar Foro de {departamento}", key=f"boton_foro_{departamento}"):
+        st.session_state[f"mostrar_foro_{departamento}"] = not st.session_state[f"mostrar_foro_{departamento}"]
+
+    if st.session_state[f"mostrar_foro_{departamento}"]:
+        st.subheader(f"Foro del Departamento: {departamento}")
+        for _, row in comentarios_departamento.iterrows():
+            st.markdown(
+                f"**{row['Usuario']} ({row['Departamento']})** - *{row['FechaHora']}*\n> {row['Comentario']}"
+            )
+
+        nuevo_comentario = st.text_area("Nuevo comentario", key=f"nuevo_comentario_{departamento}")
+        if st.button("Enviar", key=f"enviar_comentario_{departamento}"):
+            if nuevo_comentario.strip():
+                nuevo_comentario_data = pd.DataFrame(
+                    [{
+                        "Usuario": st.session_state["usuario"],
+                        "Departamento": departamento,
+                        "Comentario": nuevo_comentario,
+                        "FechaHora": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }]
+                )
+                comentarios = pd.concat([comentarios, nuevo_comentario_data], ignore_index=True)
+                guardar_comentarios(comentarios)
+                st.success("¡Comentario enviado!")
+
+# Main
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    pantalla_inicio()
+else:
+    pantalla_principal()
