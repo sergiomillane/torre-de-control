@@ -28,10 +28,10 @@ def cargar_comentarios():
     if os.path.exists(COMENTARIOS_FILE):
         comentarios = pd.read_csv(COMENTARIOS_FILE)
         if "Estado" not in comentarios.columns:
-            comentarios["Estado"] = "En espera de ser atendido"  # Estado por defecto
+            comentarios["Estado"] = "En espera de ser atendido"
         if "Respuesta" not in comentarios.columns:
-            comentarios["Respuesta"] = ""  # Respuesta vacía por defecto
-        comentarios["Respuesta"] = comentarios["Respuesta"].fillna("Sin respuesta")  # Reemplazar NaN por "Sin respuesta"
+            comentarios["Respuesta"] = ""
+        comentarios["Respuesta"] = comentarios["Respuesta"].fillna("Sin respuesta")
         return comentarios
     else:
         return pd.DataFrame(columns=["Usuario", "Departamento", "Comentario", "FechaHora", "Foro", "Estado", "Respuesta"])
@@ -89,14 +89,26 @@ def pantalla_registro():
             st.success("¡Usuario registrado con éxito! Ahora puedes iniciar sesión.")
 
 # Mostrar la pantalla principal
+# Pantalla principal
+# Mostrar los KPIs o contenido según el departamento seleccionado
 def pantalla_principal():
     st.sidebar.title("TORRE DE CONTROL VB")
-    st.sidebar.markdown(f"**Bienvenido, {st.session_state['usuario']}!**")
+    
+    # Agrega una imagen (puede ser local o desde un enlace)
+    st.sidebar.image("logo.png", width=200)
+    
+    # Mensaje de bienvenida
+    st.sidebar.markdown(f"**¡Bienvenido, {st.session_state['usuario']}!**")
+    
+    # Menú principal
     pagina = st.sidebar.radio("Selecciona un departamento", DEPARTAMENTOS)
+
+    # Botón de cerrar sesión
     if st.sidebar.button("Cerrar sesión"):
         st.session_state["autenticado"] = False
-        return
+        st.experimental_rerun()
 
+    # Mostrar los KPIs o contenido según el departamento seleccionado
     if pagina == "Dirección":
         st.title("Resumen General - Dirección")
         st.metric("Indicador Global", "85%", "5%")
@@ -113,7 +125,6 @@ def pantalla_principal():
         st.title("KPIs - Cobranza Campo")
         st.metric("Recuperación", "90%", "+10%")
         st.metric("Visitas realizadas", "300", "+50")
-        st.components.v1.iframe("https://lookerstudio.google.com/reporting/5d9046c5-a483-4e9e-8dce-0200342da70d", height=600)
     elif pagina == "Venta en tienda":
         st.title("KPIs - Venta en Tienda")
         st.metric("Ventas totales", "500,000 USD", "+50,000 USD")
@@ -135,75 +146,101 @@ def pantalla_principal():
         st.metric("Contrataciones", "15", "+5")
         st.metric("Capacitaciones", "8", "+2")
 
-    mostrar_foro(pagina)
+    # Mostrar tickets del departamento
+    mostrar_tickets(pagina)
+
+
 
 # Función para mostrar el foro
-def mostrar_foro(departamento):
-    if f"mostrar_foro_{departamento}" not in st.session_state:
-        st.session_state[f"mostrar_foro_{departamento}"] = False
+# Función para mostrar el foro
+# Función para mostrar los tickets
+def mostrar_tickets(departamento):
+    if f"mostrar_tickets_{departamento}" not in st.session_state:
+        st.session_state[f"mostrar_tickets_{departamento}"] = False
 
-    if st.button("Abrir/Cerrar foro"):
-        st.session_state[f"mostrar_foro_{departamento}"] = not st.session_state[f"mostrar_foro_{departamento}"]
+    if st.button("Abrir/Cerrar tickets"):
+        st.session_state[f"mostrar_tickets_{departamento}"] = not st.session_state[f"mostrar_tickets_{departamento}"]
 
-    if st.session_state[f"mostrar_foro_{departamento}"]:
-        comentarios = cargar_comentarios()
-        comentarios_departamento = comentarios[comentarios["Foro"] == departamento]
+    if st.session_state[f"mostrar_tickets_{departamento}"]:
+        tickets = cargar_comentarios()  # Renombramos "comentarios" a "tickets" internamente
+        tickets_departamento = tickets[tickets["Foro"] == departamento]
 
-        st.title(f"Foro del departamento: {departamento}")
-        for index, row in comentarios_departamento.iterrows():
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                indicador_estado = {
-                    "Rechazado": "🔴",
-                    "En proceso": "🟡",
-                    "Resuelto": "🟢"
-                }.get(row["Estado"], "⚪")
-                st.markdown(
-                    f"**{row['Usuario']} ({row['Departamento']})** - *{row['FechaHora']}*\n> {row['Comentario']}\n\n**Estado:** {indicador_estado} {row['Estado']}"
-                )
-                if f"ver_respuesta_{index}" not in st.session_state:
-                    st.session_state[f"ver_respuesta_{index}"] = False
-                if st.button("Ver respuesta", key=f"ver_respuesta_button_{index}"):
-                    st.session_state[f"ver_respuesta_{index}"] = not st.session_state[f"ver_respuesta_{index}"]
-                if st.session_state[f"ver_respuesta_{index}"]:
-                    st.markdown(f"**Respuesta:** {row['Respuesta']}")
-            with col2:
-                if st.session_state["departamento"] == departamento:
-                    nuevo_estado = st.selectbox(
-                        "Cambiar estado",
-                        ["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"],
-                        index=["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"].index(row["Estado"]),
-                        key=f"estado_{index}"
+        st.title(f"Tickets del departamento: {departamento}")
+        for index, row in tickets_departamento.iterrows():
+            with st.container():
+                st.markdown("---")
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    indicador_estado = {
+                        "Rechazado": "🔴",
+                        "En proceso": "🟡",
+                        "Resuelto": "🟢"
+                    }.get(row["Estado"], "⚪")
+                    st.markdown(
+                        f"### {row['Titulo']}\n"
+                        f"**{row['Usuario']} ({row['Departamento']})** - *{row['FechaHora']}*\n\n"
+                        f"> {row['Comentario']}\n\n"
+                        f"**Estado:** {indicador_estado} {row['Estado']}"
                     )
-                    nueva_respuesta = st.text_area(
-                        "Responder",
-                        row["Respuesta"] if row["Respuesta"] != "Sin respuesta" else "",
-                        key=f"respuesta_{index}"
-                    )
-                    if st.button("Actualizar", key=f"actualizar_{index}"):
-                        comentarios.loc[index, "Estado"] = nuevo_estado
-                        comentarios.loc[index, "Respuesta"] = nueva_respuesta if nueva_respuesta.strip() else "Sin respuesta"
-                        guardar_comentarios(comentarios)
-                        st.experimental_rerun()
+                    if st.button("Ver respuesta", key=f"ver_respuesta_button_{index}"):
+                        st.markdown(f"**Respuesta:** {row['Respuesta']}")
+                with col2:
+                    if st.session_state["departamento"] == departamento:
+                        nuevo_estado = st.selectbox(
+                            "Cambiar estado",
+                            ["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"],
+                            index=["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"].index(row["Estado"]),
+                            key=f"estado_{index}"
+                        )
+                        nueva_respuesta = st.text_area(
+                            "Responder",
+                            row["Respuesta"] if row["Respuesta"] != "Sin respuesta" else "",
+                            key=f"respuesta_{index}"
+                        )
+                        if st.button("Actualizar", key=f"actualizar_{index}"):
+                            tickets.loc[index, "Estado"] = nuevo_estado
+                            tickets.loc[index, "Respuesta"] = nueva_respuesta if nueva_respuesta.strip() else "Sin respuesta"
+                            guardar_comentarios(tickets)
+                            st.experimental_rerun()
 
-        nuevo_comentario = st.text_area("Añade un comentario:", key=f"nuevo_comentario_{departamento}")
-        if st.button("Enviar comentario", key=f"enviar_comentario_{departamento}"):
-            if nuevo_comentario.strip():
-                nuevo_comentario_data = pd.DataFrame(
+        nuevo_titulo = st.text_input("Título del ticket:", key=f"nuevo_titulo_{departamento}")
+        nuevo_ticket = st.text_area("Descripción del ticket:", key=f"nuevo_ticket_{departamento}")
+        if st.button("Enviar ticket", key=f"enviar_ticket_{departamento}"):
+            if nuevo_titulo.strip() and nuevo_ticket.strip():
+                nuevo_ticket_data = pd.DataFrame(
                     [{
                         "Usuario": st.session_state["usuario"],
                         "Departamento": st.session_state["departamento"],
-                        "Comentario": nuevo_comentario.strip(),
+                        "Titulo": nuevo_titulo.strip(),
+                        "Comentario": nuevo_ticket.strip(),
                         "FechaHora": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Foro": departamento,
                         "Estado": "En espera de ser atendido",
                         "Respuesta": "Sin respuesta"
                     }]
                 )
-                comentarios = pd.concat([comentarios, nuevo_comentario_data], ignore_index=True)
-                guardar_comentarios(comentarios)
-                st.success("Comentario enviado.")
+                tickets = pd.concat([tickets, nuevo_ticket_data], ignore_index=True)
+                guardar_comentarios(tickets)
+                st.success("Ticket enviado.")
                 st.experimental_rerun()
+            else:
+                st.error("Por favor completa ambos campos: Título y Descripción del ticket.")
+
+# Cargar comentarios actualizado
+def cargar_comentarios():
+    if os.path.exists(COMENTARIOS_FILE):
+        comentarios = pd.read_csv(COMENTARIOS_FILE)
+        if "Estado" not in comentarios.columns:
+            comentarios["Estado"] = "En espera de ser atendido"
+        if "Respuesta" not in comentarios.columns:
+            comentarios["Respuesta"] = ""
+        if "Titulo" not in comentarios.columns:
+            comentarios["Titulo"] = ""
+        comentarios["Respuesta"] = comentarios["Respuesta"].fillna("Sin respuesta")
+        comentarios["Titulo"] = comentarios["Titulo"].fillna("Sin título")
+        return comentarios
+    else:
+        return pd.DataFrame(columns=["Usuario", "Departamento", "Titulo", "Comentario", "FechaHora", "Foro", "Estado", "Respuesta"])
 
 # Main
 if "autenticado" not in st.session_state:
