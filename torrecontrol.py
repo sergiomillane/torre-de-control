@@ -74,7 +74,7 @@ def mostrar_indicador_superior(detallado_alertas, detallado_tickets):
         <style>
             .indicadores-superiores {{
                 position: fixed;
-                top: 50px;
+                top: 70px;
                 right: 10px;
                 display: flex;
                 gap: 15px;
