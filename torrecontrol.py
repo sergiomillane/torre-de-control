@@ -7,9 +7,6 @@ import os
 USUARIOS_FILE = "usuarios.csv"
 COMENTARIOS_FILE = "comentarios.csv"
 
-# Master Key para registro
-MASTER_KEY = "soygay1"
-
 # Departamentos disponibles
 DEPARTAMENTOS = ["Dirección", "Originación de crédito", "Cobranza virtual",
                  "Cobranza campo", "Venta en tienda", "Sistemas",
@@ -29,9 +26,15 @@ def guardar_usuarios(usuarios):
 # Cargar comentarios
 def cargar_comentarios():
     if os.path.exists(COMENTARIOS_FILE):
-        return pd.read_csv(COMENTARIOS_FILE)
+        comentarios = pd.read_csv(COMENTARIOS_FILE)
+        if "Estado" not in comentarios.columns:
+            comentarios["Estado"] = "En espera de ser atendido"  # Estado por defecto
+        if "Respuesta" not in comentarios.columns:
+            comentarios["Respuesta"] = ""  # Respuesta vacía por defecto
+        comentarios["Respuesta"] = comentarios["Respuesta"].fillna("Sin respuesta")  # Reemplazar NaN por "Sin respuesta"
+        return comentarios
     else:
-        return pd.DataFrame(columns=["Usuario", "Departamento", "Comentario", "FechaHora"])
+        return pd.DataFrame(columns=["Usuario", "Departamento", "Comentario", "FechaHora", "Foro", "Estado", "Respuesta"])
 
 # Guardar comentarios
 def guardar_comentarios(comentarios):
@@ -42,7 +45,6 @@ def pantalla_inicio():
     st.title("Torre de Control - Inicio de Sesión")
     usuarios = cargar_usuarios()
 
-    # Seleccionar entre iniciar sesión o registrarse
     opcion = st.radio("Selecciona una opción:", ["Iniciar sesión", "Registrarse"])
 
     if opcion == "Iniciar sesión":
@@ -68,17 +70,15 @@ def pantalla_registro():
     st.title("Registrar nueva cuenta")
     usuarios = cargar_usuarios()
 
-    master_key_input = st.text_input("Ingresa la Master Key", type="password")
-    if master_key_input != MASTER_KEY:
-        st.error("Debes ingresar la Master Key correcta para registrarte.")
-        return
-
     nuevo_usuario = st.text_input("Nombre de usuario")
     nueva_contraseña = st.text_input("Contraseña", type="password")
     departamento = st.selectbox("Selecciona tu departamento", DEPARTAMENTOS)
+    master_key = st.text_input("Clave maestra", type="password")
 
     if st.button("Registrar"):
-        if nuevo_usuario in usuarios["Usuario"].values:
+        if master_key != "soygay1":
+            st.error("Clave maestra incorrecta. No puedes registrarte.")
+        elif nuevo_usuario in usuarios["Usuario"].values:
             st.error("El usuario ya existe. Intenta con otro nombre.")
         else:
             nuevo_usuario_data = pd.DataFrame(
@@ -91,9 +91,11 @@ def pantalla_registro():
 # Mostrar la pantalla principal
 def pantalla_principal():
     st.sidebar.title("TORRE DE CONTROL VB")
-    st.sidebar.markdown(f"#### Bienvenido, {st.session_state['usuario']}!")
-
+    st.sidebar.markdown(f"**Bienvenido, {st.session_state['usuario']}!**")
     pagina = st.sidebar.radio("Selecciona un departamento", DEPARTAMENTOS)
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state["autenticado"] = False
+        return
 
     if pagina == "Dirección":
         st.title("Resumen General - Dirección")
@@ -133,48 +135,75 @@ def pantalla_principal():
         st.metric("Contrataciones", "15", "+5")
         st.metric("Capacitaciones", "8", "+2")
 
-    # Mostrar botón para el foro
     mostrar_foro(pagina)
-
-    # Botón de cerrar sesión
-    st.sidebar.markdown("---")
-    if st.sidebar.button("Cerrar sesión", key="cerrar_sesion"):
-        st.session_state["autenticado"] = False
-        st.experimental_rerun()
 
 # Función para mostrar el foro
 def mostrar_foro(departamento):
-    comentarios = cargar_comentarios()
-    comentarios_departamento = comentarios[comentarios["Departamento"] == departamento]
-
     if f"mostrar_foro_{departamento}" not in st.session_state:
         st.session_state[f"mostrar_foro_{departamento}"] = False
 
-    # Botón para desplegar/replegar el foro
-    if st.sidebar.button(f"Mostrar Foro de {departamento}", key=f"boton_foro_{departamento}"):
+    if st.button("Abrir/Cerrar foro"):
         st.session_state[f"mostrar_foro_{departamento}"] = not st.session_state[f"mostrar_foro_{departamento}"]
 
     if st.session_state[f"mostrar_foro_{departamento}"]:
-        st.subheader(f"Foro del Departamento: {departamento}")
-        for _, row in comentarios_departamento.iterrows():
-            st.markdown(
-                f"**{row['Usuario']} ({row['Departamento']})** - *{row['FechaHora']}*\n> {row['Comentario']}"
-            )
+        comentarios = cargar_comentarios()
+        comentarios_departamento = comentarios[comentarios["Foro"] == departamento]
 
-        nuevo_comentario = st.text_area("Nuevo comentario", key=f"nuevo_comentario_{departamento}")
-        if st.button("Enviar", key=f"enviar_comentario_{departamento}"):
+        st.title(f"Foro del departamento: {departamento}")
+        for index, row in comentarios_departamento.iterrows():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                indicador_estado = {
+                    "Rechazado": "🔴",
+                    "En proceso": "🟡",
+                    "Resuelto": "🟢"
+                }.get(row["Estado"], "⚪")
+                st.markdown(
+                    f"**{row['Usuario']} ({row['Departamento']})** - *{row['FechaHora']}*\n> {row['Comentario']}\n\n**Estado:** {indicador_estado} {row['Estado']}"
+                )
+                if f"ver_respuesta_{index}" not in st.session_state:
+                    st.session_state[f"ver_respuesta_{index}"] = False
+                if st.button("Ver respuesta", key=f"ver_respuesta_button_{index}"):
+                    st.session_state[f"ver_respuesta_{index}"] = not st.session_state[f"ver_respuesta_{index}"]
+                if st.session_state[f"ver_respuesta_{index}"]:
+                    st.markdown(f"**Respuesta:** {row['Respuesta']}")
+            with col2:
+                if st.session_state["departamento"] == departamento:
+                    nuevo_estado = st.selectbox(
+                        "Cambiar estado",
+                        ["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"],
+                        index=["En espera de ser atendido", "Rechazado", "En proceso", "Resuelto"].index(row["Estado"]),
+                        key=f"estado_{index}"
+                    )
+                    nueva_respuesta = st.text_area(
+                        "Responder",
+                        row["Respuesta"] if row["Respuesta"] != "Sin respuesta" else "",
+                        key=f"respuesta_{index}"
+                    )
+                    if st.button("Actualizar", key=f"actualizar_{index}"):
+                        comentarios.loc[index, "Estado"] = nuevo_estado
+                        comentarios.loc[index, "Respuesta"] = nueva_respuesta if nueva_respuesta.strip() else "Sin respuesta"
+                        guardar_comentarios(comentarios)
+                        st.experimental_rerun()
+
+        nuevo_comentario = st.text_area("Añade un comentario:", key=f"nuevo_comentario_{departamento}")
+        if st.button("Enviar comentario", key=f"enviar_comentario_{departamento}"):
             if nuevo_comentario.strip():
                 nuevo_comentario_data = pd.DataFrame(
                     [{
                         "Usuario": st.session_state["usuario"],
-                        "Departamento": departamento,
-                        "Comentario": nuevo_comentario,
-                        "FechaHora": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        "Departamento": st.session_state["departamento"],
+                        "Comentario": nuevo_comentario.strip(),
+                        "FechaHora": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "Foro": departamento,
+                        "Estado": "En espera de ser atendido",
+                        "Respuesta": "Sin respuesta"
                     }]
                 )
                 comentarios = pd.concat([comentarios, nuevo_comentario_data], ignore_index=True)
                 guardar_comentarios(comentarios)
-                st.success("¡Comentario enviado!")
+                st.success("Comentario enviado.")
+                st.experimental_rerun()
 
 # Main
 if "autenticado" not in st.session_state:
