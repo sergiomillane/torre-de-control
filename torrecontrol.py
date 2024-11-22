@@ -91,6 +91,7 @@ def pantalla_registro():
 # Mostrar la pantalla principal
 # Pantalla principal
 # Mostrar los KPIs o contenido según el departamento seleccionado
+# Mostrar la pantalla principal
 def pantalla_principal():
     st.sidebar.title("TORRE DE CONTROL VB")
     
@@ -111,43 +112,54 @@ def pantalla_principal():
     # Mostrar los KPIs o contenido según el departamento seleccionado
     if pagina == "Dirección":
         st.title("Resumen General - Dirección")
-        st.metric("Indicador Global", "85%", "5%")
-        st.metric("KPI Clave", "10,000 USD", "-500 USD")
+        st.metric("Incidencias Totales", "45", "-5 desde ayer")
+        st.metric("Proyectos en curso", "12", "+1 desde la semana pasada")
+        st.metric("Eficiencia Operativa", "85%", "+3%")
+        st.line_chart({"Progreso": [70, 75, 80, 85, 90]})
     elif pagina == "Originación de crédito":
         st.title("KPIs - Originación de Crédito")
         st.metric("Créditos aprobados", "120", "+15")
         st.metric("Monto originado", "2,000,000 USD", "+200,000 USD")
+        st.bar_chart({"Créditos por día": [20, 25, 22, 30, 35]})
     elif pagina == "Cobranza virtual":
         st.title("KPIs - Cobranza Virtual")
         st.metric("Cobros efectivos", "75%", "+5%")
-        st.metric("Tiempo promedio de contacto", "1 min", "-10 sec")
+        st.metric("Tiempo promedio de contacto", "1 min", "-10 seg")
+        st.line_chart({"Evolución de Cobros": [60, 65, 70, 75, 80]})
     elif pagina == "Cobranza campo":
         st.title("KPIs - Cobranza Campo")
         st.metric("Recuperación", "90%", "+10%")
         st.metric("Visitas realizadas", "300", "+50")
+        st.area_chart({"Progreso semanal": [50, 100, 150, 250, 300]})
     elif pagina == "Venta en tienda":
         st.title("KPIs - Venta en Tienda")
         st.metric("Ventas totales", "500,000 USD", "+50,000 USD")
         st.metric("Clientes atendidos", "5,000", "+500")
+        st.line_chart({"Ventas por semana": [100000, 120000, 130000, 150000, 160000]})
     elif pagina == "Sistemas":
         st.title("KPIs - Sistemas")
         st.metric("Tiempo de respuesta", "2 horas", "-30 min")
         st.metric("Tickets resueltos", "95%", "+5%")
+        st.bar_chart({"Tickets por día": [50, 45, 60, 55, 65]})
     elif pagina == "Desarrollo":
         st.title("KPIs - Desarrollo")
         st.metric("Proyectos completados", "8", "+2")
         st.metric("Horas invertidas", "200 horas", "+20 horas")
+        st.line_chart({"Progreso de Proyectos": [40, 60, 70, 80, 100]})
     elif pagina == "Riesgos":
         st.title("KPIs - Riesgos")
         st.metric("Riesgos mitigados", "95%", "+10%")
         st.metric("Alertas activadas", "10", "-2")
+        st.bar_chart({"Riesgos por semana": [5, 8, 6, 10, 4]})
     elif pagina == "Recursos humanos":
         st.title("KPIs - Recursos Humanos")
         st.metric("Contrataciones", "15", "+5")
         st.metric("Capacitaciones", "8", "+2")
+        st.line_chart({"Crecimiento del equipo": [50, 55, 60, 65, 70]})
 
     # Mostrar tickets del departamento
     mostrar_tickets(pagina)
+
 
 
 
