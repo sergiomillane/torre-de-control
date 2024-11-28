@@ -289,6 +289,9 @@ def guardar_comentarios(comentarios):
 
 # Pantalla de inicio
 def pantalla_inicio():
+    # Agregar el logo en la pantalla de inicio de sesión
+    st.image("logo.png", width=200)  # Reemplaza "logo.png" con la ruta de tu logo si es diferente
+
     st.title("Torre de Control - Inicio de Sesión")
     usuarios = cargar_usuarios()
 
@@ -517,7 +520,10 @@ def mostrar_tickets(departamento):
                 tickets = pd.concat([tickets, nuevo_ticket_data], ignore_index=True)
                 guardar_comentarios(tickets)
                 st.success("Ticket enviado.")
-                st.experimental_rerun()
+                try:
+                    st.experimental_rerun()
+                except st.runtime.scriptrunner.script_runner.RerunException:
+                    pass  # Ignorar el error causado por la recarga
             else:
                 st.error("Por favor completa ambos campos: Título y Descripción del ticket.")
 
