@@ -264,7 +264,12 @@ def mostrar_alertas(departamento):
                 alertas.loc[index, "Respuesta"] = nueva_respuesta if nueva_respuesta.strip() else "Sin respuesta"
                 alertas.loc[index, "Estado"] = nuevo_estado
                 guardar_alertas(alertas)
-                st.experimental_rerun()
+                st.success("Alerta actualizada correctamente.")
+                # Manejo del reinicio para evitar el error visible
+                try:
+                    st.experimental_rerun()
+                except Exception:
+                    pass  # Ignorar cualquier excepción causada por la recarga
 
 
 
