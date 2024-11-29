@@ -520,12 +520,14 @@ def mostrar_tickets(departamento):
                 tickets = pd.concat([tickets, nuevo_ticket_data], ignore_index=True)
                 guardar_comentarios(tickets)
                 st.success("Ticket enviado.")
+                # Manejo del reinicio para evitar el error visible
                 try:
                     st.experimental_rerun()
-                except st.runtime.scriptrunner.script_runner.RerunException:
-                    pass  # Ignorar el error causado por la recarga
+                except Exception:
+                    pass  # Ignorar cualquier excepción causada por la recarga
             else:
                 st.error("Por favor completa ambos campos: Título y Descripción del ticket.")
+
 
 # Cargar comentarios actualizado
 def cargar_comentarios():
