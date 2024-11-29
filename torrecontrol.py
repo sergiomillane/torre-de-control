@@ -362,7 +362,11 @@ def pantalla_principal():
     # Botón de cerrar sesión
     if st.sidebar.button("Cerrar sesión"):
         st.session_state["autenticado"] = False
-        st.experimental_rerun()
+        # Manejo del reinicio para evitar el error visible
+        try:
+            st.experimental_rerun()
+        except Exception:
+            pass  # Ignorar cualquier excepción causada por la recarga
 
     # Obtener contadores de alertas y tickets detallados
     detallado_alertas = contar_detallado_alertas(pagina)
@@ -504,7 +508,12 @@ def mostrar_tickets(departamento):
                             tickets.loc[index, "Estado"] = nuevo_estado
                             tickets.loc[index, "Respuesta"] = nueva_respuesta if nueva_respuesta.strip() else "Sin respuesta"
                             guardar_comentarios(tickets)
-                            st.experimental_rerun()
+                            st.success("Ticket actualizado correctamente.")
+                            # Manejo del reinicio para evitar el error visible
+                            try:
+                                st.experimental_rerun()
+                            except Exception:
+                                pass  # Ignorar cualquier excepción causada por la recarga
 
         nuevo_titulo = st.text_input("Título del ticket:", key=f"nuevo_titulo_{departamento}")
         nuevo_ticket = st.text_area("Descripción del ticket:", key=f"nuevo_ticket_{departamento}")
